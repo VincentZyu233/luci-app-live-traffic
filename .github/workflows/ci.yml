@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [ main ]
   pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -10,10 +12,39 @@ permissions:
 
 jobs:
   checks:
+    name: Checks and trigger detection
     runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.flags.outputs.should_build }}
+      should_release: ${{ steps.flags.outputs.should_release }}
+      version: ${{ steps.flags.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - name: Parse commit message
+        id: flags
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+        shell: bash
+        run: |
+          package_version="$(sed -n 's/^PKG_VERSION:=//p' Makefile)"
+          package_release="$(sed -n 's/^PKG_RELEASE:=//p' Makefile)"
+          test -n "$package_version"
+          test -n "$package_release"
+          should_build=false
+          should_release=false
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            should_build=true
+          elif printf '%s\n' "$COMMIT_MSG" | grep -Fqi '[build-release]'; then
+            should_build=true
+            should_release=true
+          elif printf '%s\n' "$COMMIT_MSG" | grep -Fqi '[build-action]'; then
+            should_build=true
+          fi
+          echo "should_build=$should_build" >> "$GITHUB_OUTPUT"
+          echo "should_release=$should_release" >> "$GITHUB_OUTPUT"
+          echo "version=v${package_version}-r${package_release}" >> "$GITHUB_OUTPUT"
+          echo "build=$should_build release=$should_release version=v${package_version}-r${package_release}"
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
       - name: Check JavaScript syntax
@@ -26,12 +57,14 @@ jobs:
         run: python -m py_compile scripts/deploy.py
 
   build:
+    name: Build OpenWrt IPK
     runs-on: ubuntu-latest
     needs: checks
+    if: needs.checks.outputs.should_build == 'true'
     env:
       SDK_URL: https://downloads.openwrt.org/releases/23.05.4/targets/ramips/mt7621/openwrt-sdk-23.05.4-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install build tools
         run: sudo apt-get update && sudo apt-get install -y build-essential libncurses-dev zlib1g-dev gawk gettext libssl-dev xsltproc rsync unzip python3
       - name: Download OpenWrt SDK
@@ -42,7 +75,7 @@ jobs:
       - name: Prepare feeds
         working-directory: /tmp/openwrt-sdk
         run: |
-          ./scripts/feeds update luci packages
+          ./scripts/feeds update base packages luci
           ./scripts/feeds install luci-base nlbwmon rpcd-mod-ucode
           ln -s "$GITHUB_WORKSPACE" package/luci-app-live-traffic
           make defconfig
@@ -56,5 +89,33 @@ jobs:
           test -n "$(find dist -name '*.ipk' -print -quit)"
       - uses: actions/upload-artifact@v4
         with:
-          name: luci-app-live-traffic-openwrt-23.05
+          name: luci-app-live-traffic-${{ needs.checks.outputs.version }}-openwrt-23.05
           path: dist/*.ipk
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [ checks, build ]
+    if: needs.checks.outputs.should_release == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: luci-app-live-traffic-${{ needs.checks.outputs.version }}-openwrt-23.05
+          path: dist
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.checks.outputs.version }}
+        shell: bash
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; bump PKG_VERSION or PKG_RELEASE." >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" dist/*.ipk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "luci-app-live-traffic $RELEASE_TAG" \
+            --generate-notes

@@ -54,6 +54,8 @@ node --test tests/core.test.mjs
 node --check htdocs/luci-static/resources/live-traffic/core.js
 ```
 
+CI 的提交关键词、IPK 构建和 GitHub Release 规则见 [ci.md](ci.md)。
+
 ## 许可证
 
 [Apache-2.0](LICENSE)
