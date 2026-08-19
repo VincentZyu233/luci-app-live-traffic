@@ -9,8 +9,15 @@ const source = fs.readFileSync(
 );
 
 let now = 1_000_000;
+const NativeDate = Date;
+class FakeDate extends NativeDate {
+  static now() {
+    return now;
+  }
+}
+
 const sandbox = {
-  Date: { now: () => now },
+  Date: FakeDate,
   String,
   Number,
   Object,
@@ -26,7 +33,10 @@ const sandbox = {
   },
   rpc: { declare: () => () => Promise.resolve({}) },
   _: (value) => value,
-  window: {},
+  window: {
+    devicePixelRatio: 1,
+    getComputedStyle: () => ({ color: "#ffffff" }),
+  },
   document: {},
   L: {},
 };
@@ -37,6 +47,7 @@ const core = new Core();
 test("exports a LuCI class constructor", () => {
   assert.equal(typeof Core, "function");
   assert.equal(typeof core.Monitor, "function");
+  assert.equal(core.projectTitle, "LALT - luci-app-live-traffic");
 });
 
 function snapshot(rxBytes, txBytes, wanRx = rxBytes, wanTx = txBytes) {
@@ -96,4 +107,33 @@ test("evicts samples outside the retention window", () => {
 test("formats rates and byte totals", () => {
   assert.equal(core.formatRate(125000), "1.00 Mbit/s");
   assert.equal(core.formatBytes(1024), "1.00 KiB");
+});
+
+test("reserves space for rate labels and renders responsive time ticks", () => {
+  const labels = [];
+  const moves = [];
+  const context = {
+    setTransform() {},
+    clearRect() {},
+    beginPath() {},
+    moveTo(x, y) { moves.push({ x, y }); },
+    lineTo() {},
+    stroke() {},
+    fillText(text, x, y) { labels.push({ text, x, y }); },
+    measureText(text) { return { width: String(text).length * 7 }; },
+  };
+  const canvas = {
+    width: 0,
+    height: 0,
+    getBoundingClientRect: () => ({ width: 1000, height: 190 }),
+    getContext: () => context,
+  };
+
+  core.drawChart(canvas, [
+    { t: 1_000, down: 125_000, up: 62_500 },
+    { t: 1_600, down: 250_000, up: 125_000 },
+  ]);
+
+  assert.equal(labels.filter((label) => label.y === 184).length, 5);
+  assert.ok(moves[0].x > 80);
 });

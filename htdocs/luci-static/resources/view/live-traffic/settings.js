@@ -11,7 +11,7 @@ return view.extend({
 	},
 
 	setBusy: function(message) {
-		ui.showModal(_('Live Traffic'), [ E('p', { 'class': 'spinning' }, message) ]);
+		ui.showModal('LALT', [ E('p', { 'class': 'spinning' }, message) ]);
 	},
 
 	applySettings: function() {
@@ -88,7 +88,8 @@ return view.extend({
 		}, _('Restore previous setting'));
 
 		var node = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('Live Traffic Settings')),
+			E('h2', {}, traffic.projectTitle),
+			E('div', { 'class': 'cbi-map-descr' }, _('Live Traffic Settings')),
 			this.notice,
 			E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, _('Collector status')),

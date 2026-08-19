@@ -80,7 +80,8 @@ return view.extend({
 		this.status = E('div', { 'class': 'lt-status' });
 		this.grid = E('div', { 'class': 'lt-devices' });
 		var node = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('Device Matrix')),
+			E('h2', {}, traffic.projectTitle),
+			E('div', { 'class': 'cbi-map-descr' }, _('Device Matrix')),
 			this.status,
 			E('div', { 'class': 'lt-legend' }, [ E('span', { 'class': 'download' }, _('Download')), E('span', { 'class': 'upload' }, _('Upload')) ]),
 			this.grid

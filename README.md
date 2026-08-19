@@ -1,6 +1,6 @@
-# 📊 luci-app-live-traffic
+# 📊 LALT - luci-app-live-traffic
 
-面向 OpenWrt 的轻量实时流量监控 LuCI 应用，按下挂设备展示上传、下载和最近 10 分钟走势。
+LALT（`luci-app-live-traffic`）是面向 OpenWrt 的轻量实时流量监控 LuCI 应用，按下挂设备展示上传、下载和最近 10 分钟走势。
 
 ## ✨ 功能
 
@@ -43,7 +43,7 @@ python scripts/deploy.py uninstall --host 192.168.1.1
 
 ## ⚙️ 安装后
 
-进入 **状态 -> 实时流量 -> 设置**，确认初始化后，插件会备份 `nlbwmon` 原刷新间隔并调整为选择的采样间隔。
+进入 **状态 -> LALT -> 设置**，确认初始化后，插件会备份 `nlbwmon` 原刷新间隔并调整为选择的采样间隔。
 
 流量数据范围仅包括经过本 OpenWrt 路由器转发的下挂客户端。它无法监控上游主路由的其他平级设备。
 

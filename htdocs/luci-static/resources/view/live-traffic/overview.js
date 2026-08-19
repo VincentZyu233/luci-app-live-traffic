@@ -141,7 +141,7 @@ return view.extend({
 		this.tableBody = E('tbody');
 
 		var node = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, _('Live Traffic')),
+			E('h2', {}, traffic.projectTitle),
 			this.status,
 			E('div', { 'class': 'lt-kpis' }, [
 				E('div', { 'class': 'lt-kpi' }, [ E('span', { 'class': 'lt-kpi-label' }, _('WAN download')), this.wanDown ]),

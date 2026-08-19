@@ -193,6 +193,18 @@ function formatBytes(bytes) {
 	return formatNumber(bytes, [ 'B', 'KiB', 'MiB', 'GiB', 'TiB' ], 1024);
 }
 
+function formatChartTime(timestamp, span) {
+	var options = {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+	};
+	if (span < 120)
+		options.second = '2-digit';
+
+	return new Date(timestamp * 1000).toLocaleTimeString([], options);
+}
+
 function drawChart(canvas, samples, options) {
 	if (!canvas)
 		return;
@@ -213,19 +225,29 @@ function drawChart(canvas, samples, options) {
 	var style = window.getComputedStyle(canvas);
 	var foreground = style.color || '#475569';
 	var grid = 'rgba(127, 127, 127, 0.18)';
-	var padding = { left: 42, right: 10, top: 12, bottom: 24 };
-	var plotWidth = width - padding.left - padding.right;
-	var plotHeight = height - padding.top - padding.bottom;
 	var maximum = 1;
 
 	(samples || []).forEach(function(sample) {
 		maximum = Math.max(maximum, sample.down, sample.up);
 	});
 
+	ctx.font = '11px sans-serif';
+	var widestRate = 0;
+	for (var rateLine = 0; rateLine <= 3; rateLine++)
+		widestRate = Math.max(widestRate, ctx.measureText(formatRate(maximum * rateLine / 3)).width);
+
+	var padding = {
+		left: Math.max(48, Math.ceil(widestRate) + 10),
+		right: 10,
+		top: 12,
+		bottom: 24,
+	};
+	var plotWidth = width - padding.left - padding.right;
+	var plotHeight = height - padding.top - padding.bottom;
+
 	ctx.strokeStyle = grid;
 	ctx.lineWidth = 1;
 	ctx.fillStyle = foreground;
-	ctx.font = '11px sans-serif';
 	ctx.textAlign = 'right';
 	for (var line = 0; line <= 3; line++) {
 		var y = padding.top + plotHeight * line / 3;
@@ -246,6 +268,20 @@ function drawChart(canvas, samples, options) {
 	var start = samples[0].t;
 	var end = samples[samples.length - 1].t;
 	var span = Math.max(1, end - start);
+	var tickCount = options && options.compact ? 3 : (plotWidth >= 700 ? 5 : (plotWidth >= 420 ? 3 : 2));
+	ctx.textBaseline = 'alphabetic';
+	for (var tick = 0; tick < tickCount; tick++) {
+		var progress = tick / (tickCount - 1);
+		var tickX = padding.left + progress * plotWidth;
+		var tickTime = start + progress * span;
+
+		ctx.beginPath();
+		ctx.moveTo(tickX, padding.top + plotHeight);
+		ctx.lineTo(tickX, padding.top + plotHeight + 4);
+		ctx.stroke();
+		ctx.textAlign = tick === 0 ? 'left' : (tick === tickCount - 1 ? 'right' : 'center');
+		ctx.fillText(formatChartTime(tickTime, span), tickX, height - 6);
+	}
 
 	function lineFor(field, color) {
 		ctx.beginPath();
@@ -264,11 +300,6 @@ function drawChart(canvas, samples, options) {
 
 	lineFor('down', '#16a34a');
 	lineFor('up', '#e8590c');
-	ctx.fillStyle = foreground;
-	ctx.textAlign = 'left';
-	ctx.fillText(_('10 minutes ago'), padding.left, height - 6);
-	ctx.textAlign = 'right';
-	ctx.fillText(_('Now'), width - padding.right, height - 6);
 }
 
 function loadCss() {
@@ -283,6 +314,7 @@ function loadCss() {
 }
 
 return baseclass.extend({
+	projectTitle: 'LALT - luci-app-live-traffic',
 	snapshot: callSnapshot,
 	settings: callSettings,
 	configure: callConfigure,

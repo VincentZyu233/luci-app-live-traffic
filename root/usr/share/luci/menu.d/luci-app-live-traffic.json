@@ -1,6 +1,6 @@
 {
 	"admin/status/live-traffic": {
-		"title": "Live Traffic",
+		"title": "LALT",
 		"order": 25,
 		"action": {
 			"type": "firstchild"
