@@ -1,0 +1,7 @@
+.idea/
+.vscode/
+*.ipk
+*.apk
+dist/
+__pycache__/
+*.pyc

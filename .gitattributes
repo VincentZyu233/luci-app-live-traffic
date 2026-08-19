@@ -1,0 +1,12 @@
+* text=auto
+
+*.js text eol=lf
+*.json text eol=lf linguist-detectable=true
+*.md text eol=lf linguist-detectable=true
+*.py text eol=lf
+*.sh text eol=lf
+*.uc text eol=lf
+Makefile text eol=lf
+
+tests/fixtures/** linguist-vendored=true
+dist/** linguist-generated=true

@@ -1,0 +1,36 @@
+{
+	"admin/status/live-traffic": {
+		"title": "Live Traffic",
+		"order": 25,
+		"action": {
+			"type": "firstchild"
+		},
+		"depends": {
+			"acl": [ "luci-app-live-traffic" ]
+		}
+	},
+	"admin/status/live-traffic/overview": {
+		"title": "Overview",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "live-traffic/overview"
+		}
+	},
+	"admin/status/live-traffic/devices": {
+		"title": "Devices",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "live-traffic/devices"
+		}
+	},
+	"admin/status/live-traffic/settings": {
+		"title": "Settings",
+		"order": 3,
+		"action": {
+			"type": "view",
+			"path": "live-traffic/settings"
+		}
+	}
+}

@@ -1,0 +1,6 @@
+config core 'main'
+	option interval '1'
+	option retention_seconds '600'
+	option unit 'bits'
+	option managed_nlbwmon '0'
+	option previous_refresh_interval ''

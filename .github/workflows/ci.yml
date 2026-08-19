@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: find htdocs -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Validate JSON
+        run: find root -name '*.json' -print0 | xargs -0 -n1 jq empty
+      - name: Run tests
+        run: node --test tests/core.test.mjs
+      - name: Check Python
+        run: python -m py_compile scripts/deploy.py
+
+  build:
+    runs-on: ubuntu-latest
+    needs: checks
+    env:
+      SDK_URL: https://downloads.openwrt.org/releases/23.05.4/targets/ramips/mt7621/openwrt-sdk-23.05.4-ramips-mt7621_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y build-essential libncurses-dev zlib1g-dev gawk gettext libssl-dev xsltproc rsync unzip python3
+      - name: Download OpenWrt SDK
+        run: |
+          curl -fsSL "$SDK_URL" -o /tmp/openwrt-sdk.tar.xz
+          mkdir /tmp/openwrt-sdk
+          tar -xJf /tmp/openwrt-sdk.tar.xz -C /tmp/openwrt-sdk --strip-components=1
+      - name: Prepare feeds
+        working-directory: /tmp/openwrt-sdk
+        run: |
+          ./scripts/feeds update luci packages
+          ./scripts/feeds install luci-base nlbwmon rpcd-mod-ucode
+          ln -s "$GITHUB_WORKSPACE" package/luci-app-live-traffic
+          make defconfig
+      - name: Build IPK
+        working-directory: /tmp/openwrt-sdk
+        run: make package/luci-app-live-traffic/compile V=sc
+      - name: Collect package
+        run: |
+          mkdir -p dist
+          find /tmp/openwrt-sdk/bin -name 'luci-app-live-traffic_*.ipk' -exec cp {} dist/ \;
+          test -n "$(find dist -name '*.ipk' -print -quit)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-live-traffic-openwrt-23.05
+          path: dist/*.ipk

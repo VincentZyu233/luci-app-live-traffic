@@ -1,0 +1,18 @@
+{
+	"luci-app-live-traffic": {
+		"description": "Grant access to the live traffic monitor",
+		"read": {
+			"ubus": {
+				"luci.live_traffic": [ "snapshot", "settings" ],
+				"luci-rpc": [ "getDHCPLeases" ]
+			},
+			"uci": [ "firewall", "live_traffic", "nlbwmon" ]
+		},
+		"write": {
+			"ubus": {
+				"luci.live_traffic": [ "configure", "restore" ]
+			},
+			"uci": [ "live_traffic", "nlbwmon" ]
+		}
+	}
+}

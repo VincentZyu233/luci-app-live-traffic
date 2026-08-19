@@ -1,0 +1,142 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "Live Traffic"
+msgstr "实时流量"
+
+msgid "Overview"
+msgstr "总览"
+
+msgid "Devices"
+msgstr "设备"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Device Matrix"
+msgstr "设备矩阵"
+
+msgid "Live Traffic Settings"
+msgstr "实时流量设置"
+
+msgid "WAN download"
+msgstr "WAN 下载"
+
+msgid "WAN upload"
+msgstr "WAN 上传"
+
+msgid "Active devices"
+msgstr "活动设备"
+
+msgid "Last update"
+msgstr "最后更新"
+
+msgid "WAN trend"
+msgstr "WAN 走势"
+
+msgid "Device trend"
+msgstr "设备走势"
+
+msgid "Device trend: %s"
+msgstr "设备走势：%s"
+
+msgid "Downstream devices"
+msgstr "下挂设备"
+
+msgid "Device"
+msgstr "设备"
+
+msgid "IP address"
+msgstr "IP 地址"
+
+msgid "MAC address"
+msgstr "MAC 地址"
+
+msgid "Download"
+msgstr "下载"
+
+msgid "Upload"
+msgstr "上传"
+
+msgid "Total"
+msgstr "合计"
+
+msgid "Now"
+msgstr "现在"
+
+msgid "10 minutes ago"
+msgstr "10 分钟前"
+
+msgid "Waiting for traffic samples..."
+msgstr "正在等待流量样本..."
+
+msgid "No downstream client traffic has been recorded yet."
+msgstr "尚未记录到下挂客户端流量。"
+
+msgid "Flow offloading is enabled. Per-device traffic may be lower than the actual value; this application will not change firewall settings."
+msgstr "流量卸载已开启，逐设备流量可能低于实际值；本应用不会修改防火墙设置。"
+
+msgid "Flow offloading is enabled, so per-device values may be lower than actual traffic."
+msgstr "流量卸载已开启，因此逐设备数值可能低于实际流量。"
+
+msgid "Live sampling is active."
+msgstr "实时采样已启用。"
+
+msgid "Collector status"
+msgstr "采集器状态"
+
+msgid "nlbwmon service"
+msgstr "nlbwmon 服务"
+
+msgid "Collector refresh interval"
+msgstr "采集器刷新间隔"
+
+msgid "History retention"
+msgstr "历史保留时间"
+
+msgid "Flow offloading"
+msgstr "流量卸载"
+
+msgid "Configuration ownership"
+msgstr "配置管理状态"
+
+msgid "Sampling interval"
+msgstr "采样间隔"
+
+msgid "Refresh every"
+msgstr "刷新周期"
+
+msgid "Initialize / Apply"
+msgstr "初始化 / 应用"
+
+msgid "Restore previous setting"
+msgstr "恢复原设置"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Managed by this application"
+msgstr "由本应用管理"
+
+msgid "Not initialized"
+msgstr "尚未初始化"
+
+msgid "Disabled"
+msgstr "已关闭"
+
+msgid "1 second"
+msgstr "1 秒"
+
+msgid "2 seconds"
+msgstr "2 秒"
+
+msgid "5 seconds"
+msgstr "5 秒"
+
+msgid "10 seconds"
+msgstr "10 秒"

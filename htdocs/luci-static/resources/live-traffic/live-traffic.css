@@ -1,0 +1,174 @@
+.lt-status {
+	margin: 0 0 1rem;
+	padding: .7rem .85rem;
+	border-left: 4px solid #64748b;
+	background: rgba(100, 116, 139, .1);
+}
+
+.lt-status.warning {
+	border-left-color: #d97706;
+	background: rgba(217, 119, 6, .1);
+}
+
+.lt-status.error {
+	border-left-color: #dc2626;
+	background: rgba(220, 38, 38, .1);
+}
+
+.lt-kpis {
+	display: grid;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+	gap: .75rem;
+	margin: 0 0 1rem;
+}
+
+.lt-kpi {
+	min-width: 0;
+	padding: .7rem 0;
+	border-bottom: 2px solid rgba(127, 127, 127, .25);
+}
+
+.lt-kpi-label {
+	display: block;
+	font-size: .8rem;
+	opacity: .7;
+}
+
+.lt-kpi-value {
+	display: block;
+	margin-top: .2rem;
+	font-size: 1.15rem;
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.lt-legend {
+	display: flex;
+	gap: 1rem;
+	align-items: center;
+	margin: .35rem 0 .65rem;
+	font-size: .85rem;
+}
+
+.lt-legend span::before {
+	display: inline-block;
+	width: .75rem;
+	height: .2rem;
+	margin-right: .35rem;
+	vertical-align: middle;
+	content: '';
+}
+
+.lt-legend .download::before {
+	background: #16a34a;
+}
+
+.lt-legend .upload::before {
+	background: #e8590c;
+}
+
+.lt-chart {
+	display: block;
+	width: 100%;
+	height: 190px;
+	color: inherit;
+}
+
+.lt-chart.compact {
+	height: 125px;
+}
+
+.lt-device-row {
+	cursor: pointer;
+}
+
+.lt-device-row:focus,
+.lt-device-row:hover {
+	background: rgba(14, 165, 233, .09);
+	outline: none;
+}
+
+.lt-device-row.selected {
+	box-shadow: inset 3px 0 #0ea5e9;
+}
+
+.lt-devices {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
+}
+
+.lt-device {
+	min-width: 0;
+	padding: .85rem;
+	border: 1px solid rgba(127, 127, 127, .3);
+	border-radius: 6px;
+}
+
+.lt-device-head {
+	display: flex;
+	justify-content: space-between;
+	gap: .75rem;
+	align-items: flex-start;
+}
+
+.lt-device-name {
+	margin: 0;
+	font-size: 1rem;
+	word-break: break-word;
+}
+
+.lt-device-meta {
+	margin-top: .2rem;
+	font-size: .8rem;
+	opacity: .7;
+	word-break: break-all;
+}
+
+.lt-device-rates {
+	display: flex;
+	gap: .75rem;
+	font-size: .82rem;
+	white-space: nowrap;
+}
+
+.lt-device-rates .download {
+	color: #15803d;
+}
+
+.lt-device-rates .upload {
+	color: #c2410c;
+}
+
+.lt-settings-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: .5rem;
+	margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+	.lt-kpis {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.lt-devices {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 520px) {
+	.lt-device-head {
+		display: block;
+	}
+
+	.lt-device-rates {
+		margin-top: .55rem;
+	}
+
+	.lt-chart {
+		height: 165px;
+	}
+}
