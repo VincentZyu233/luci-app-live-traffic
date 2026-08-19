@@ -67,7 +67,7 @@ def deploy(args: argparse.Namespace) -> None:
     remote(
         args,
         "chmod 755 /usr/share/rpcd/ucode/luci.live_traffic.uc; "
-        "rm -f /tmp/luci-indexcache; rm -rf /tmp/luci-modulecache; "
+        "rm -f /tmp/luci-indexcache /tmp/luci-indexcache.*; rm -rf /tmp/luci-modulecache; "
         "/etc/init.d/rpcd restart; sleep 1; ubus -S call luci.live_traffic settings",
     )
 
@@ -82,7 +82,7 @@ def uninstall(args: argparse.Namespace) -> None:
         f"/usr/share/rpcd/ucode/luci.live_traffic.uc{purge}; "
         "rm -rf /www/luci-static/resources/live-traffic "
         "/www/luci-static/resources/view/live-traffic; "
-        "rm -f /tmp/luci-indexcache; rm -rf /tmp/luci-modulecache; "
+        "rm -f /tmp/luci-indexcache /tmp/luci-indexcache.*; rm -rf /tmp/luci-modulecache; "
         "/etc/init.d/rpcd restart",
     )
 
