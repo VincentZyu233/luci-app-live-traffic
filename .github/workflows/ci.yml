@@ -86,8 +86,11 @@ jobs:
         run: |
           mkdir -p dist
           find /tmp/openwrt-sdk/bin -name 'luci-app-live-traffic_*.ipk' -exec cp {} dist/ \;
+          find /tmp/openwrt-sdk/bin -name 'luci-i18n-live-traffic-zh-cn_*.ipk' -exec cp {} dist/ \;
           test -n "$(find dist -name '*.ipk' -print -quit)"
-      - uses: actions/upload-artifact@v4
+          find dist -name 'luci-app-live-traffic_*.ipk' -print -quit | grep -q .
+          find dist -name 'luci-i18n-live-traffic-zh-cn_*.ipk' -print -quit | grep -q .
+      - uses: actions/upload-artifact@v7
         with:
           name: luci-app-live-traffic-${{ needs.checks.outputs.version }}-openwrt-23.05
           path: dist/*.ipk
@@ -100,7 +103,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: luci-app-live-traffic-${{ needs.checks.outputs.version }}-openwrt-23.05
           path: dist

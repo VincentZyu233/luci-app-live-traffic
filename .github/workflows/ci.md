@@ -46,3 +46,5 @@ flowchart LR
 快速检查包括 JavaScript 语法、JSON 解析、Node.js 测试和 Python 编译检查。
 
 IPK 当前使用 OpenWrt 23.05.4 的 `ramips/mt7621` SDK 构建；软件包架构为 `all`，因为插件本身不包含平台相关二进制。
+
+Actions Artifact 同时包含主包 `luci-app-live-traffic` 和简体中文语言包 `luci-i18n-live-traffic-zh-cn`，安装时应同时安装两者。
