@@ -1,4 +1,5 @@
 'use strict';
+'require baseclass';
 'require rpc';
 
 var callSnapshot = rpc.declare({
@@ -281,7 +282,7 @@ function loadCss() {
 	document.head.appendChild(link);
 }
 
-return {
+return baseclass.extend({
 	snapshot: callSnapshot,
 	settings: callSettings,
 	configure: callConfigure,
@@ -292,4 +293,4 @@ return {
 	formatBytes: formatBytes,
 	drawChart: drawChart,
 	loadCss: loadCss,
-};
+});

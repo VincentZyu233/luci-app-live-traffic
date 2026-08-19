@@ -17,6 +17,13 @@ const sandbox = {
   Array,
   Math,
   console,
+  baseclass: {
+    extend: (members) => {
+      function LiveTrafficCore() {}
+      Object.assign(LiveTrafficCore.prototype, members);
+      return LiveTrafficCore;
+    },
+  },
   rpc: { declare: () => () => Promise.resolve({}) },
   _: (value) => value,
   window: {},
@@ -24,7 +31,13 @@ const sandbox = {
   L: {},
 };
 
-const core = vm.runInNewContext("(function () {" + source + "\n})()", sandbox);
+const Core = vm.runInNewContext("(function () {" + source + "\n})()", sandbox);
+const core = new Core();
+
+test("exports a LuCI class constructor", () => {
+  assert.equal(typeof Core, "function");
+  assert.equal(typeof core.Monitor, "function");
+});
 
 function snapshot(rxBytes, txBytes, wanRx = rxBytes, wanTx = txBytes) {
   return {
