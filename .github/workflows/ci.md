@@ -1,8 +1,8 @@
-# CI 构建与发布
+# 🏗️ CI 构建与发布
 
 GitHub Actions 工作流位于 `.github/workflows/ci.yml`，负责静态检查、测试、OpenWrt IPK 构建和 GitHub Release。
 
-## 触发规则
+## 🎯 触发规则
 
 | 事件或提交关键词 | 快速检查 | 构建 IPK | 创建 Release |
 | --- | :---: | :---: | :---: |
@@ -14,7 +14,7 @@ GitHub Actions 工作流位于 `.github/workflows/ci.yml`，负责静态检查�
 
 关键词不区分大小写，但必须保留方括号。若同一提交同时包含两个关键词，`[build-release]` 优先。
 
-## 提交示例
+## 💬 提交示例
 
 ```bash
 # 只运行检查，不下载 SDK
@@ -29,7 +29,7 @@ git commit -m "release(package): 发布新版本 [build-release]"
 
 发布前必须在 `Makefile` 中更新 `PKG_VERSION` 或 `PKG_RELEASE`。Release 标签由两者组合生成，例如 `v0.1.0-r1`。相同标签已存在时，工作流会失败，不会覆盖已有 Release。
 
-## 流水线
+## 🔄 流水线
 
 ```mermaid
 flowchart LR
