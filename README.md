@@ -25,11 +25,18 @@ LALT（`luci-app-live-traffic`）是面向 OpenWrt 的轻量实时流量监控 L
 
 ![LALT 设置](docs/images/preview/preview.settings.png)
 
-## 🧩 兼容性
+## 🧪 开发测试环境
 
-- 已适配 OpenWrt 23.05.x 和 `opkg`。
-- 首要测试目标为 OpenWrt 23.05.4 `ramips/mt7621`。
+- 已测试 OpenWrt `23.05.4`、Linux `5.15.162` 和 `opkg`。
+- 路由器型号：Xiaomi Mi Router 3G（小米路由器 R3G）。
+- CPU：MediaTek MT7621，四线程，主频 `880 MHz`。
+- CPU 架构：MIPS 1004Kc Little-Endian，对应 OpenWrt `ramips/mt7621`。
+- 内存：约 `244 MiB`。
 - 依赖 `nlbwmon` 与 `rpcd-mod-ucode`。
+
+> **测试设备 Fastfetch 信息**
+>
+> ![小米路由器 R3G 的 OpenWrt Fastfetch 信息](docs/images/fastfetch.router-info.png)
 
 硬件或软件 Flow Offloading 会使部分流量绕过 conntrack，因此逐设备统计可能低于实际值。
 
