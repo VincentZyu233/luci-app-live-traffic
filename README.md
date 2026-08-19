@@ -11,6 +11,20 @@ LALT（`luci-app-live-traffic`）是面向 OpenWrt 的轻量实时流量监控 L
 - 历史仅保存在浏览器内存，不持续写入闪存。
 - 检测 Flow Offloading 并警告，不修改防火墙配置。
 
+## 🖼️ 界面预览
+
+**实时流量总览**
+
+![LALT 实时流量总览](docs/images/preview/preview.overview.png)
+
+**设备矩阵**
+
+![LALT 设备矩阵](docs/images/preview/preview.devices.png)
+
+**设置**
+
+![LALT 设置](docs/images/preview/preview.settings.png)
+
 ## 🧩 兼容性
 
 - 已适配 OpenWrt 23.05.x 和 `opkg`。
