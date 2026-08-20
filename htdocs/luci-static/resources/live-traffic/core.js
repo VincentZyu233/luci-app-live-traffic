@@ -610,11 +610,6 @@ function renderChart(state, frameTime, progress) {
 	var targetEnd = samples[samples.length - 1].t;
 	var start = oldStart + (targetStart - oldStart) * easing(progress);
 	var end = oldEnd + (targetEnd - oldEnd) * easing(progress);
-	if (state.profile.continuous && state.motion) {
-		var drift = Math.min(1, Math.max(0, (frameTime - state.updatedAt) / 1000));
-		start += drift;
-		end += drift;
-	}
 	var span = Math.max(1, end - start);
 	var tickCount = state.options.compact ? 3 : (plotWidth >= 700 ? 5 : (plotWidth >= 420 ? 3 : 2));
 	ctx.textBaseline = 'alphabetic';
@@ -629,6 +624,11 @@ function renderChart(state, frameTime, progress) {
 		ctx.textAlign = tick === 0 ? 'left' : (tick === tickCount - 1 ? 'right' : 'center');
 		ctx.fillText(formatChartTime(tickTime, span), tickX, height - 6);
 	}
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(padding.left, padding.top, plotWidth, plotHeight);
+	ctx.clip();
 
 	if (state.profile.area) {
 		drawArea(ctx, samples, 'down', [ 'rgba(22, 163, 74, 0.24)', 'rgba(6, 182, 212, 0.015)' ], start, span, maximum, padding, plotWidth, plotHeight);
@@ -657,6 +657,7 @@ function renderChart(state, frameTime, progress) {
 		drawMovingPoint(ctx, samples, 'down', '#22d3ee', phase, start, span, maximum, padding, plotWidth, plotHeight);
 		drawMovingPoint(ctx, samples, 'up', '#fb7185', (phase + 0.5) % 1, start, span, maximum, padding, plotWidth, plotHeight);
 	}
+	ctx.restore();
 }
 
 function observeChart(state) {

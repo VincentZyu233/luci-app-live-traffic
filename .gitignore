@@ -1,16 +1,30 @@
+# 🗂️ 临时文件与本地调试产物
 temp/
 tmp/
 
+# 🛠️ 编辑器与 IDE 配置
 .idea/
 .vscode/
 
+# 🐍 Python 虚拟环境与工具缓存
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 📦 OpenWrt 软件包与构建产物
 *.ipk
 *.apk
 dist/
 
+# 🔐 WebUI 测试私有配置
 scripts/test/.env
 scripts/test/.env.*
 !scripts/test/.env.example
 
+# 🧹 Python 字节码缓存
 __pycache__/
 *.pyc

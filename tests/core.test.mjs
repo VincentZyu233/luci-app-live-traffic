@@ -157,10 +157,15 @@ test("reserves space for rate labels and renders responsive time ticks", () => {
     stroke() {},
     fillText(text, x, y) { labels.push({ text, x, y }); },
     measureText(text) { return { width: String(text).length * 7 }; },
+    save() {},
+    rect() {},
+    clip() {},
+    restore() {},
   };
   const canvas = {
     width: 0,
     height: 0,
+    isConnected: true,
     getBoundingClientRect: () => ({ width: 1000, height: 190 }),
     getContext: () => context,
   };
@@ -172,4 +177,57 @@ test("reserves space for rate labels and renders responsive time ticks", () => {
 
   assert.equal(labels.filter((label) => label.y === 184).length, 5);
   assert.ok(moves[0].x > 80);
+  canvas.isConnected = false;
+});
+
+test("keeps ultra quality animation inside a stable plot area", () => {
+  const lineXs = [];
+  const clips = [];
+  const frames = [];
+  const gradient = { addColorStop() {} };
+  const context = {
+    setTransform() {},
+    clearRect() {},
+    beginPath() {},
+    moveTo() {},
+    lineTo(x) { lineXs.push(x); },
+    stroke() {},
+    fill() {},
+    closePath() {},
+    fillText() {},
+    fillRect() {},
+    arc() {},
+    save() {},
+    rect(x, _y, width, height) { clips.push({ x, width, height }); },
+    clip() {},
+    restore() {},
+    measureText(text) { return { width: String(text).length * 7 }; },
+    createLinearGradient() { return gradient; },
+  };
+  const canvas = {
+    width: 0,
+    height: 0,
+    isConnected: true,
+    getBoundingClientRect: () => ({ width: 1000, height: 190 }),
+    getContext: () => context,
+  };
+
+  sandbox.window.requestAnimationFrame = (callback) => {
+    frames.push(callback);
+    return frames.length;
+  };
+  core.setQuality("ultra");
+  frames.shift()(now);
+  core.drawChart(canvas, [
+    { t: 1_000, down: 125_000, up: 62_500 },
+    { t: 1_002, down: 250_000, up: 125_000 },
+  ]);
+
+  lineXs.length = 0;
+  frames.shift()(now + 500);
+
+  const plotClip = clips[clips.length - 1];
+  assert.ok(plotClip.x > 0 && plotClip.width < 1000 && plotClip.height < 190);
+  assert.ok(lineXs.length > 0);
+  assert.ok(Math.min(...lineXs) >= plotClip.x);
 });

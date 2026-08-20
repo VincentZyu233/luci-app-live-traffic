@@ -427,6 +427,10 @@ def run_matrix(config: Config) -> tuple[dict[str, Any], int]:
                         )
 
                 def failed_request(request: Any) -> None:
+                    # LuCI polling requests can be intentionally cancelled when
+                    # the matrix navigates to the next page or closes a context.
+                    if request.failure == "net::ERR_ABORTED":
+                        return
                     if current_case["id"] and request.url.startswith(origin):
                         add_issue(
                             report,
