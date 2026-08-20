@@ -8,5 +8,9 @@ tmp/
 *.apk
 dist/
 
+scripts/test/.env
+scripts/test/.env.*
+!scripts/test/.env.example
+
 __pycache__/
 *.pyc

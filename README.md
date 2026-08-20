@@ -78,6 +78,34 @@ node --test tests/core.test.mjs
 node --check htdocs/luci-static/resources/live-traffic/core.js
 ```
 
+真实路由器 WebUI 验收脚本使用 Python Playwright。配置优先级为：CLI 参数 > 当前进程环境变量 > `scripts/test/.env` > 内置默认值。先根据 `.env.example` 创建私有 `.env`，再创建虚拟环境并安装依赖：
+
+```bash
+uv venv tests/.venv
+uv pip install --python tests/.venv -r scripts/test/requirements.txt
+```
+
+激活虚拟环境后，以下是 5 个常用示例：
+
+```bash
+# 默认检查 5 档质量、3 个页面和桌面/移动端，共生成 30 张截图
+python scripts/test/webui_e2e.py
+
+# 有头慢速运行，并在结束前保留浏览器 5 秒
+python scripts/test/webui_e2e.py --headed --slow-mo-ms 250 --hold-seconds 5
+
+# 仅检查总览页
+python scripts/test/webui_e2e.py --url https://192.168.5.1 --page overview
+
+# 仅检查桌面端超高质量模式
+python scripts/test/webui_e2e.py --quality ultra --viewport desktop
+
+# 从独立私密文件读取密码
+python scripts/test/webui_e2e.py --password-file path/to/password.txt
+```
+
+截图和脱敏报告输出到被 Git 忽略的 `tmp/browser-debug/`；截图仍可能包含 IP、MAC 和设备名，请勿公开上传。
+
 CI 的提交关键词、IPK 构建和 GitHub Release 规则见 [ci.md](.github/workflows/ci.md)。
 
 ## 📄 许可证
