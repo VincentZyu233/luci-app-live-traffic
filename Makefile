@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-live-traffic
-PKG_VERSION:=0.2.2-beta.3
+PKG_VERSION:=0.2.3-beta.4
 PKG_RELEASE:=1
 
 PKG_LICENSE:=Apache-2.0

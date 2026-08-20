@@ -11,7 +11,7 @@
 - 流量历史只保存在浏览器内存，不得新增持续写入路由器闪存的高频历史记录喵。
 - Flow Offloading 只检测和提示，不得由插件自动修改防火墙卸载配置喵。
 - 不得提交真实路由器地址、账号、密码、SSH 密钥、浏览器私有路径、MAC、设备名或真实设备截图喵。
-- 私有配置只能放入已忽略的 `scripts/test/.env`、`tmp/` 或其他明确忽略的私有文件喵。
+- 私有配置只能放入已忽略的 `tests/webui/.env`、`tmp/` 或其他明确忽略的私有文件喵。
 - 不得覆盖或撤销用户已有的无关工作区改动喵。
 
 ## 验证要求
@@ -22,12 +22,12 @@
 node --test tests/core.test.mjs
 find htdocs -name '*.js' -print0 | xargs -0 -n1 node --check
 find root -name '*.json' -print0 | xargs -0 -n1 jq empty
-find scripts -name '*.py' -print0 | xargs -0 python -m py_compile
+find scripts tests -path '*/.venv' -prune -o -type f -name '*.py' -print0 | xargs -0 python -m py_compile
 ```
 
 - 当前 Python 验证是 `py_compile`，仓库尚未接入 pytest，不得声称或假设 `uv run pytest` 可用喵。
 - 修改 UI、图表、主题或响应式布局时，应按需运行真实 LuCI Playwright 验收喵。
-- 浏览器测试依赖使用 `uv venv tests/.venv` 和 `uv pip install --python tests/.venv -r scripts/test/requirements.txt` 安装喵。
+- 浏览器测试依赖使用 `uv venv .venv` 和 `uv pip install --python .venv -r tests/webui/requirements.txt` 安装喵。
 - 先运行目标页面、质量和视口的小矩阵，再按风险决定是否运行默认 30 案例完整矩阵喵。
 - 浏览器截图和报告只能输出到已忽略的 `tmp/browser-debug/`，提交前必须确认没有被 Git 追踪喵。
 
@@ -55,7 +55,7 @@ find scripts -name '*.py' -print0 | xargs -0 python -m py_compile
 - 解析提交信息中的构建关键词，并读取 `Makefile` 包版本喵。
 - 检查全部 LuCI JavaScript 语法和 `root` 下 JSON 文件喵。
 - 运行 Node.js 核心逻辑测试喵。
-- 编译检查全部 `scripts/**/*.py` 文件喵。
+- 编译检查 `scripts` 与 `tests` 下除虚拟环境外的全部 Python 文件喵。
 
 ## 部署与发布
 

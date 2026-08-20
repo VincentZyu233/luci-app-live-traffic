@@ -143,7 +143,10 @@ return view.extend({
 		var node = E('div', { 'class': 'cbi-map lt-app' }, [
 			E('div', { 'class': 'lt-titlebar' }, [
 				E('h2', {}, traffic.projectTitle),
-				this.qualityControl
+				E('div', { 'class': 'lt-title-actions' }, [
+					this.qualityControl,
+					traffic.createProjectLink()
+				])
 			]),
 			E('div', { 'class': 'cbi-map-descr' }, _('Device Matrix')),
 			this.status,

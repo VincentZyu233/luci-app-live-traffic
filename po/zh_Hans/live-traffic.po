@@ -21,6 +21,9 @@ msgstr "设备矩阵"
 msgid "Live Traffic Settings"
 msgstr "实时流量设置"
 
+msgid "Open project on GitHub"
+msgstr "在 GitHub 上打开项目"
+
 msgid "WAN download"
 msgstr "WAN 下载"
 

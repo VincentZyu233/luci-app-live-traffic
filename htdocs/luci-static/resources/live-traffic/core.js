@@ -34,6 +34,7 @@ var callDHCPLeases = rpc.declare({
 });
 
 var QUALITY_STORAGE_KEY = 'lalt.uiQuality';
+var PROJECT_URL = 'https://github.com/VincentZyu233/luci-app-live-traffic';
 var QUALITY_NAMES = [ 'auto', 'low', 'medium', 'high', 'ultra' ];
 var QUALITY_PROFILES = {
 	low: { rank: 0, duration: 0, dpr: 1, area: false, glow: false, continuous: false },
@@ -261,6 +262,17 @@ function createQualityControl(compact) {
 	qualityControls.push(control);
 	refreshQualityControls();
 	return control.node;
+}
+
+function createProjectLink() {
+	return E('a', {
+		'class': 'btn cbi-button cbi-button-neutral lt-project-link',
+		'href': PROJECT_URL,
+		'target': '_blank',
+		'rel': 'noopener noreferrer',
+		'aria-label': _('Open project on GitHub'),
+		'title': _('Open project on GitHub')
+	}, 'GitHub ↗');
 }
 
 function normalizeMac(mac) {
@@ -845,6 +857,7 @@ if (typeof document.addEventListener === 'function')
 
 return baseclass.extend({
 	projectTitle: 'LALT - luci-app-live-traffic',
+	projectUrl: PROJECT_URL,
 	snapshot: callSnapshot,
 	settings: callSettings,
 	configure: callConfigure,
@@ -858,6 +871,7 @@ return baseclass.extend({
 	qualityState: qualityState,
 	setQuality: setQuality,
 	createQualityControl: createQualityControl,
+	createProjectLink: createProjectLink,
 	qualityLabel: qualityLabel,
 	loadCss: loadCss,
 });

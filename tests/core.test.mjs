@@ -35,6 +35,7 @@ const sandbox = {
   },
   rpc: { declare: () => () => Promise.resolve({}) },
   _: (value) => value,
+  E: (tag, attributes, children) => ({ tag, attributes, children }),
   window: {
     devicePixelRatio: 1,
     innerWidth: 1200,
@@ -61,6 +62,19 @@ test("exports a LuCI class constructor", () => {
   assert.equal(typeof Core, "function");
   assert.equal(typeof core.Monitor, "function");
   assert.equal(core.projectTitle, "LALT - luci-app-live-traffic");
+});
+
+test("creates a secure external project link", () => {
+  assert.equal(
+    core.projectUrl,
+    "https://github.com/VincentZyu233/luci-app-live-traffic",
+  );
+  const link = core.createProjectLink();
+  assert.equal(link.tag, "a");
+  assert.equal(link.attributes.href, core.projectUrl);
+  assert.equal(link.attributes.target, "_blank");
+  assert.equal(link.attributes.rel, "noopener noreferrer");
+  assert.equal(link.attributes["aria-label"], "Open project on GitHub");
 });
 
 function snapshot(rxBytes, txBytes, wanRx = rxBytes, wanTx = txBytes) {

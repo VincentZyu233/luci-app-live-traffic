@@ -28,6 +28,22 @@
 	margin-right: auto;
 }
 
+.lt-title-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: .65rem;
+}
+
+.lt-project-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	white-space: nowrap;
+	text-decoration: none;
+}
+
 .lt-quality-compact {
 	display: flex;
 	align-items: center;
@@ -295,6 +311,16 @@
 	.lt-quality-compact {
 		width: 100%;
 		justify-content: space-between;
+	}
+
+	.lt-title-actions {
+		width: 100%;
+		justify-content: space-between;
+	}
+
+	.lt-title-actions .lt-quality-compact {
+		width: auto;
+		flex: 1 1 13rem;
 	}
 
 	.lt-quality-segments {

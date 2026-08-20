@@ -54,7 +54,7 @@ jobs:
       - name: Run tests
         run: node --test tests/core.test.mjs
       - name: Check Python
-        run: find scripts -name '*.py' -print0 | xargs -0 python -m py_compile
+        run: find scripts tests -path '*/.venv' -prune -o -type f -name '*.py' -print0 | xargs -0 python -m py_compile
 
   build:
     name: Build OpenWrt IPK

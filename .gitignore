@@ -21,9 +21,9 @@ htmlcov/
 dist/
 
 # 🔐 WebUI 测试私有配置
-scripts/test/.env
-scripts/test/.env.*
-!scripts/test/.env.example
+tests/webui/.env
+tests/webui/.env.*
+!tests/webui/.env.example
 
 # 🧹 Python 字节码缓存
 __pycache__/

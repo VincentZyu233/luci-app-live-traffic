@@ -89,7 +89,10 @@ return view.extend({
 		}, _('Restore previous setting'));
 
 		var node = E('div', { 'class': 'cbi-map lt-app' }, [
-			E('h2', {}, traffic.projectTitle),
+			E('div', { 'class': 'lt-titlebar' }, [
+				E('h2', {}, traffic.projectTitle),
+				E('div', { 'class': 'lt-title-actions' }, traffic.createProjectLink())
+			]),
 			E('div', { 'class': 'cbi-map-descr' }, _('Live Traffic Settings')),
 			this.notice,
 			E('div', { 'class': 'cbi-section' }, [

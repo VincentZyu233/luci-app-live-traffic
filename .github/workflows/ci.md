@@ -43,7 +43,7 @@ flowchart LR
     G -- 是 --> H[创建 GitHub Release]
 ```
 
-快速检查包括 JavaScript 语法、JSON 解析、Node.js 测试和 Python 编译检查。
+快速检查包括 JavaScript 语法、JSON 解析、Node.js 测试，以及 `scripts` 和 `tests` 下的 Python 编译检查。
 
 IPK 当前使用 OpenWrt 23.05.4 的 `ramips/mt7621` SDK 构建；软件包架构为 `all`，因为插件本身不包含平台相关二进制。
 
