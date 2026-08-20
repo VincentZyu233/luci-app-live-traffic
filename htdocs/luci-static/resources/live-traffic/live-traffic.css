@@ -7,7 +7,8 @@
 
 .lt-status.warning {
 	border-left-color: #d97706;
-	background: rgba(217, 119, 6, .1);
+	color: #713f12;
+	background: #fef3c7;
 }
 
 .lt-status.error {
