@@ -76,6 +76,7 @@ return view.extend({
 		this.historyValue = E('span');
 		this.offloadValue = E('span');
 		this.managedValue = E('span');
+		this.qualityControl = traffic.createQualityControl(false);
 		this.interval = E('select', { 'class': 'cbi-input-select' }, [
 			E('option', { 'value': '1' }, _('1 second')),
 			E('option', { 'value': '2' }, _('2 seconds')),
@@ -87,7 +88,7 @@ return view.extend({
 			'click': function() { return self.restoreSettings(); }
 		}, _('Restore previous setting'));
 
-		var node = E('div', { 'class': 'cbi-map' }, [
+		var node = E('div', { 'class': 'cbi-map lt-app' }, [
 			E('h2', {}, traffic.projectTitle),
 			E('div', { 'class': 'cbi-map-descr' }, _('Live Traffic Settings')),
 			this.notice,
@@ -102,6 +103,10 @@ return view.extend({
 				])
 			]),
 			E('div', { 'class': 'cbi-section' }, [
+				E('h3', {}, _('Browser UI quality')),
+				this.qualityControl
+			]),
+			E('div', { 'class': 'cbi-section' }, [
 				E('h3', {}, _('Sampling interval')),
 				E('div', { 'class': 'cbi-value' }, [
 					E('label', { 'class': 'cbi-value-title' }, _('Refresh every')),
@@ -113,6 +118,9 @@ return view.extend({
 				])
 			])
 		]);
+		var quality = traffic.qualityState();
+		node.setAttribute('data-lalt-quality', quality.resolved);
+		node.setAttribute('data-lalt-motion', quality.motion ? 'on' : 'off');
 
 		this.renderState(settings || {});
 		return node;

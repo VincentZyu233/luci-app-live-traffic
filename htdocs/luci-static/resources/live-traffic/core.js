@@ -33,6 +33,236 @@ var callDHCPLeases = rpc.declare({
 	expect: { '': {} }
 });
 
+var QUALITY_STORAGE_KEY = 'lalt.uiQuality';
+var QUALITY_NAMES = [ 'auto', 'low', 'medium', 'high', 'ultra' ];
+var QUALITY_PROFILES = {
+	low: { rank: 0, duration: 0, dpr: 1, area: false, glow: false, continuous: false },
+	medium: { rank: 1, duration: 350, dpr: 1.5, area: true, glow: false, continuous: false },
+	high: { rank: 2, duration: 650, dpr: 2, area: true, glow: true, continuous: false },
+	ultra: { rank: 3, duration: 650, dpr: 2.5, area: true, glow: true, continuous: true },
+};
+var qualityControls = [];
+var chartStates = [];
+var metricStates = [];
+var frameRequest = null;
+var lastFrameTime = 0;
+var measuredFrames = 0;
+var slowFrames = 0;
+var autoState = {
+	badWindows: 0,
+	penaltyUntil: 0,
+	retryUsed: false,
+	permanentLow: false,
+	retryTimer: null,
+};
+var chartObserver = null;
+var fallbackQuality = 'auto';
+var reducedMotionQuery = typeof window.matchMedia === 'function'
+	? window.matchMedia('(prefers-reduced-motion: reduce)')
+	: null;
+
+function validQuality(value) {
+	return QUALITY_NAMES.indexOf(value) >= 0;
+}
+
+function readQuality() {
+	try {
+		var value = window.localStorage.getItem(QUALITY_STORAGE_KEY);
+		return validQuality(value) ? value : fallbackQuality;
+	}
+	catch (error) {
+		return fallbackQuality;
+	}
+}
+
+function prefersReducedMotion() {
+	return reducedMotionQuery && reducedMotionQuery.matches;
+}
+
+function capableOfMediumQuality() {
+	var cores = typeof navigator !== 'undefined' ? Number(navigator.hardwareConcurrency) || 0 : 0;
+	var memory = typeof navigator !== 'undefined' ? Number(navigator.deviceMemory) || 0 : 0;
+	var finePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: fine)').matches;
+	var wideViewport = Number(window.innerWidth) >= 900;
+
+	return cores >= 8 && (!memory || memory >= 8) && finePointer && wideViewport;
+}
+
+function resetAutoState() {
+	autoState.badWindows = 0;
+	autoState.penaltyUntil = 0;
+	autoState.retryUsed = false;
+	autoState.permanentLow = false;
+	if (autoState.retryTimer != null) {
+		window.clearTimeout(autoState.retryTimer);
+		autoState.retryTimer = null;
+	}
+}
+
+function qualityState() {
+	var selected = readQuality();
+	var reduced = prefersReducedMotion();
+	var resolved = selected;
+
+	if (selected === 'auto') {
+		resolved = !reduced && capableOfMediumQuality() && !autoState.permanentLow && Date.now() >= autoState.penaltyUntil
+			? 'medium'
+			: 'low';
+	}
+
+	return {
+		selected: selected,
+		resolved: resolved,
+		motion: !reduced,
+		profile: QUALITY_PROFILES[resolved],
+	};
+}
+
+function qualityLabel(value) {
+	return {
+		auto: _('Auto'),
+		low: _('Low'),
+		medium: _('Medium'),
+		high: _('High'),
+		ultra: _('Ultra'),
+	}[value] || _('Auto');
+}
+
+function applyQualityAttributes() {
+	if (!document.querySelectorAll)
+		return;
+
+	var state = qualityState();
+	var nodes = document.querySelectorAll('.lt-app');
+	for (var i = 0; i < nodes.length; i++) {
+		nodes[i].setAttribute('data-lalt-quality', state.resolved);
+		nodes[i].setAttribute('data-lalt-motion', state.motion ? 'on' : 'off');
+		nodes[i].setAttribute('data-lalt-paused', document.hidden ? 'true' : 'false');
+	}
+}
+
+function refreshQualityControls() {
+	var state = qualityState();
+	for (var i = 0; i < qualityControls.length; i++) {
+		var control = qualityControls[i];
+		if (control.select)
+			control.select.value = state.selected;
+		if (control.buttons)
+			control.buttons.forEach(function(button) {
+				button.className = 'btn lt-quality-option' + (button.getAttribute('data-quality') === state.selected ? ' active' : '');
+			});
+		if (control.resolved)
+			control.resolved.textContent = _('Effective quality: %s').format(qualityLabel(state.resolved));
+		control.node.title = _('Effective quality: %s').format(qualityLabel(state.resolved));
+	}
+	applyQualityAttributes();
+}
+
+function wakeAnimator() {
+	if (frameRequest != null || document.hidden || typeof window.requestAnimationFrame !== 'function')
+		return;
+	frameRequest = window.requestAnimationFrame(animationFrame);
+}
+
+function notifyQualityChange() {
+	refreshQualityControls();
+	for (var i = 0; i < chartStates.length; i++)
+		chartStates[i].forceDraw = true;
+	wakeAnimator();
+}
+
+function setQuality(value) {
+	if (!validQuality(value))
+		value = 'auto';
+	fallbackQuality = value;
+	try {
+		window.localStorage.setItem(QUALITY_STORAGE_KEY, value);
+	}
+	catch (error) {
+		/* The current page still follows the default when storage is unavailable. */
+	}
+	resetAutoState();
+	notifyQualityChange();
+	return qualityState();
+}
+
+function reportFrameWindow() {
+	if (readQuality() !== 'auto' || qualityState().resolved !== 'medium') {
+		measuredFrames = 0;
+		slowFrames = 0;
+		return;
+	}
+
+	if (measuredFrames < 45)
+		return;
+
+	if (slowFrames / measuredFrames > 0.2)
+		autoState.badWindows++;
+	else
+		autoState.badWindows = 0;
+
+	measuredFrames = 0;
+	slowFrames = 0;
+	if (autoState.badWindows < 3)
+		return;
+
+	autoState.badWindows = 0;
+	if (autoState.retryUsed) {
+		autoState.permanentLow = true;
+		notifyQualityChange();
+		return;
+	}
+
+	autoState.penaltyUntil = Date.now() + 30000;
+	if (autoState.retryTimer != null)
+		window.clearTimeout(autoState.retryTimer);
+	autoState.retryTimer = window.setTimeout(function() {
+		autoState.penaltyUntil = 0;
+		autoState.retryUsed = true;
+		autoState.retryTimer = null;
+		notifyQualityChange();
+	}, 30000);
+	notifyQualityChange();
+}
+
+function createQualityControl(compact) {
+	var control = { select: null, buttons: null, resolved: null, node: null };
+	var values = QUALITY_NAMES.slice();
+
+	if (compact) {
+		control.select = E('select', {
+			'class': 'cbi-input-select lt-quality-select',
+			'change': function(ev) { setQuality(ev.target.value); }
+		}, values.map(function(value) {
+			return E('option', { 'value': value }, qualityLabel(value));
+		}));
+		control.node = E('label', { 'class': 'lt-quality-compact' }, [
+			E('span', {}, _('UI quality')),
+			control.select
+		]);
+	}
+	else {
+		control.buttons = values.map(function(value) {
+			return E('button', {
+				'class': 'btn lt-quality-option',
+				'type': 'button',
+				'data-quality': value,
+				'click': function() { setQuality(value); }
+			}, qualityLabel(value));
+		});
+		control.resolved = E('div', { 'class': 'lt-quality-resolved' });
+		control.node = E('div', { 'class': 'lt-quality-picker' }, [
+			E('div', { 'class': 'lt-quality-segments' }, control.buttons),
+			control.resolved,
+			E('div', { 'class': 'cbi-value-description' }, _('This preference is stored in this browser and does not change router sampling.'))
+		]);
+	}
+
+	qualityControls.push(control);
+	refreshQualityControls();
+	return control.node;
+}
+
 function normalizeMac(mac) {
 	return String(mac || '').toLowerCase();
 }
@@ -205,14 +435,127 @@ function formatChartTime(timestamp, span) {
 	return new Date(timestamp * 1000).toLocaleTimeString([], options);
 }
 
-function drawChart(canvas, samples, options) {
-	if (!canvas)
+function easing(progress) {
+	return 1 - Math.pow(1 - progress, 3);
+}
+
+function copySamples(samples) {
+	return (samples || []).map(function(sample) {
+		return { t: Number(sample.t), down: Number(sample.down) || 0, up: Number(sample.up) || 0 };
+	});
+}
+
+function interpolateSamples(previous, target, progress) {
+	if (!previous || !previous.length || progress >= 1)
+		return copySamples(target);
+
+	var byTime = {};
+	for (var i = 0; i < previous.length; i++)
+		byTime[String(previous[i].t)] = previous[i];
+	var fallback = previous[previous.length - 1];
+
+	return target.map(function(sample) {
+		var source = byTime[String(sample.t)] || fallback || sample;
+		return {
+			t: sample.t,
+			down: source.down + (sample.down - source.down) * progress,
+			up: source.up + (sample.up - source.up) * progress,
+		};
+	});
+}
+
+function sampleMaximum(samples) {
+	var maximum = 1;
+	for (var i = 0; i < samples.length; i++)
+		maximum = Math.max(maximum, samples[i].down, samples[i].up);
+	return maximum;
+}
+
+function chartPoint(sample, field, start, span, maximum, padding, plotWidth, plotHeight) {
+	return {
+		x: padding.left + ((sample.t - start) / span) * plotWidth,
+		y: padding.top + plotHeight - (sample[field] / maximum) * plotHeight,
+	};
+}
+
+function drawArea(ctx, samples, field, colors, start, span, maximum, padding, plotWidth, plotHeight) {
+	if (!ctx.createLinearGradient || !ctx.fill || !ctx.closePath)
 		return;
 
+	var gradient = ctx.createLinearGradient(0, padding.top, 0, padding.top + plotHeight);
+	gradient.addColorStop(0, colors[0]);
+	gradient.addColorStop(1, colors[1]);
+	ctx.beginPath();
+	ctx.moveTo(chartPoint(samples[0], field, start, span, maximum, padding, plotWidth, plotHeight).x, padding.top + plotHeight);
+	for (var i = 0; i < samples.length; i++) {
+		var point = chartPoint(samples[i], field, start, span, maximum, padding, plotWidth, plotHeight);
+		ctx.lineTo(point.x, point.y);
+	}
+	ctx.lineTo(chartPoint(samples[samples.length - 1], field, start, span, maximum, padding, plotWidth, plotHeight).x, padding.top + plotHeight);
+	ctx.closePath();
+	ctx.fillStyle = gradient;
+	ctx.fill();
+}
+
+function drawLine(ctx, samples, field, color, state, start, span, maximum, padding, plotWidth, plotHeight) {
+	function trace() {
+		ctx.beginPath();
+		for (var i = 0; i < samples.length; i++) {
+			var point = chartPoint(samples[i], field, start, span, maximum, padding, plotWidth, plotHeight);
+			if (i === 0)
+				ctx.moveTo(point.x, point.y);
+			else
+				ctx.lineTo(point.x, point.y);
+		}
+	}
+
+	ctx.strokeStyle = color;
+	var lineWidth = state.options.compact ? 1.5 : (state.profile.rank >= 2 ? 2.4 : 2);
+	if (state.profile.glow) {
+		trace();
+		ctx.globalAlpha = 0.2;
+		ctx.lineWidth = lineWidth + 5;
+		ctx.stroke();
+		ctx.globalAlpha = 1;
+		ctx.shadowColor = color;
+		ctx.shadowBlur = state.profile.rank >= 3 ? 9 : 5;
+	}
+	trace();
+	ctx.lineWidth = lineWidth;
+	ctx.stroke();
+	ctx.shadowBlur = 0;
+}
+
+function drawMovingPoint(ctx, samples, field, color, phase, start, span, maximum, padding, plotWidth, plotHeight) {
+	if (!ctx.arc || samples.length < 2)
+		return;
+
+	var position = phase * (samples.length - 1);
+	var index = Math.min(samples.length - 2, Math.floor(position));
+	var fraction = position - index;
+	var first = samples[index];
+	var second = samples[index + 1];
+	var sample = {
+		t: first.t + (second.t - first.t) * fraction,
+		down: first.down + (second.down - first.down) * fraction,
+		up: first.up + (second.up - first.up) * fraction,
+	};
+	var point = chartPoint(sample, field, start, span, maximum, padding, plotWidth, plotHeight);
+	ctx.beginPath();
+	ctx.fillStyle = color;
+	ctx.shadowColor = color;
+	ctx.shadowBlur = 12;
+	ctx.arc(point.x, point.y, 2.6, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.shadowBlur = 0;
+}
+
+function renderChart(state, frameTime, progress) {
+	var canvas = state.canvas;
 	var rect = canvas.getBoundingClientRect();
 	var width = Math.max(280, Math.floor(rect.width || 600));
 	var height = Math.max(110, Math.floor(rect.height || 180));
-	var ratio = window.devicePixelRatio || 1;
+	var ratio = Math.min(window.devicePixelRatio || 1, state.profile.dpr);
 	if (canvas.width !== Math.floor(width * ratio) || canvas.height !== Math.floor(height * ratio)) {
 		canvas.width = Math.floor(width * ratio);
 		canvas.height = Math.floor(height * ratio);
@@ -222,16 +565,13 @@ function drawChart(canvas, samples, options) {
 	ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 	ctx.clearRect(0, 0, width, height);
 
+	var samples = interpolateSamples(state.previous, state.target, easing(progress));
+	var maximum = state.previousMaximum + (state.targetMaximum - state.previousMaximum) * easing(progress);
 	var style = window.getComputedStyle(canvas);
 	var foreground = style.color || '#475569';
 	var grid = 'rgba(127, 127, 127, 0.18)';
-	var maximum = 1;
-
-	(samples || []).forEach(function(sample) {
-		maximum = Math.max(maximum, sample.down, sample.up);
-	});
-
 	ctx.font = '11px sans-serif';
+
 	var widestRate = 0;
 	for (var rateLine = 0; rateLine <= 3; rateLine++)
 		widestRate = Math.max(widestRate, ctx.measureText(formatRate(maximum * rateLine / 3)).width);
@@ -255,26 +595,33 @@ function drawChart(canvas, samples, options) {
 		ctx.moveTo(padding.left, y);
 		ctx.lineTo(width - padding.right, y);
 		ctx.stroke();
-		var rate = maximum * (1 - line / 3);
-		ctx.fillText(formatRate(rate), padding.left - 5, y + 4);
+		ctx.fillText(formatRate(maximum * (1 - line / 3)), padding.left - 5, y + 4);
 	}
 
-	if (!samples || samples.length < 2) {
+	if (samples.length < 2) {
 		ctx.textAlign = 'center';
 		ctx.fillText(_('Waiting for traffic samples...'), padding.left + plotWidth / 2, padding.top + plotHeight / 2);
 		return;
 	}
 
-	var start = samples[0].t;
-	var end = samples[samples.length - 1].t;
+	var oldStart = state.previous.length ? state.previous[0].t : samples[0].t;
+	var oldEnd = state.previous.length ? state.previous[state.previous.length - 1].t : samples[samples.length - 1].t;
+	var targetStart = samples[0].t;
+	var targetEnd = samples[samples.length - 1].t;
+	var start = oldStart + (targetStart - oldStart) * easing(progress);
+	var end = oldEnd + (targetEnd - oldEnd) * easing(progress);
+	if (state.profile.continuous && state.motion) {
+		var drift = Math.min(1, Math.max(0, (frameTime - state.updatedAt) / 1000));
+		start += drift;
+		end += drift;
+	}
 	var span = Math.max(1, end - start);
-	var tickCount = options && options.compact ? 3 : (plotWidth >= 700 ? 5 : (plotWidth >= 420 ? 3 : 2));
+	var tickCount = state.options.compact ? 3 : (plotWidth >= 700 ? 5 : (plotWidth >= 420 ? 3 : 2));
 	ctx.textBaseline = 'alphabetic';
 	for (var tick = 0; tick < tickCount; tick++) {
-		var progress = tick / (tickCount - 1);
-		var tickX = padding.left + progress * plotWidth;
-		var tickTime = start + progress * span;
-
+		var tickProgress = tick / (tickCount - 1);
+		var tickX = padding.left + tickProgress * plotWidth;
+		var tickTime = start + tickProgress * span;
 		ctx.beginPath();
 		ctx.moveTo(tickX, padding.top + plotHeight);
 		ctx.lineTo(tickX, padding.top + plotHeight + 4);
@@ -283,23 +630,176 @@ function drawChart(canvas, samples, options) {
 		ctx.fillText(formatChartTime(tickTime, span), tickX, height - 6);
 	}
 
-	function lineFor(field, color) {
-		ctx.beginPath();
-		ctx.strokeStyle = color;
-		ctx.lineWidth = options && options.compact ? 1.5 : 2;
-		samples.forEach(function(sample, index) {
-			var x = padding.left + ((sample.t - start) / span) * plotWidth;
-			var y = padding.top + plotHeight - (sample[field] / maximum) * plotHeight;
-			if (index === 0)
-				ctx.moveTo(x, y);
-			else
-				ctx.lineTo(x, y);
-		});
-		ctx.stroke();
+	if (state.profile.area) {
+		drawArea(ctx, samples, 'down', [ 'rgba(22, 163, 74, 0.24)', 'rgba(6, 182, 212, 0.015)' ], start, span, maximum, padding, plotWidth, plotHeight);
+		drawArea(ctx, samples, 'up', [ 'rgba(232, 89, 12, 0.2)', 'rgba(220, 38, 38, 0.01)' ], start, span, maximum, padding, plotWidth, plotHeight);
 	}
 
-	lineFor('down', '#16a34a');
-	lineFor('up', '#e8590c');
+	if (state.profile.rank >= 3 && state.motion && ctx.fillRect) {
+		var scanX = padding.left + ((frameTime % 3600) / 3600) * plotWidth;
+		if (ctx.createLinearGradient) {
+			var scan = ctx.createLinearGradient(scanX - 14, 0, scanX + 14, 0);
+			scan.addColorStop(0, 'rgba(255, 255, 255, 0)');
+			scan.addColorStop(0.5, 'rgba(255, 255, 255, 0.09)');
+			scan.addColorStop(1, 'rgba(255, 255, 255, 0)');
+			ctx.fillStyle = scan;
+		}
+		else {
+			ctx.fillStyle = 'rgba(255, 255, 255, 0.055)';
+		}
+		ctx.fillRect(scanX - 14, padding.top, 28, plotHeight);
+	}
+
+	drawLine(ctx, samples, 'down', '#16a34a', state, start, span, maximum, padding, plotWidth, plotHeight);
+	drawLine(ctx, samples, 'up', '#e8590c', state, start, span, maximum, padding, plotWidth, plotHeight);
+	if (state.profile.rank >= 3 && state.motion) {
+		var phase = (frameTime % 3000) / 3000;
+		drawMovingPoint(ctx, samples, 'down', '#22d3ee', phase, start, span, maximum, padding, plotWidth, plotHeight);
+		drawMovingPoint(ctx, samples, 'up', '#fb7185', (phase + 0.5) % 1, start, span, maximum, padding, plotWidth, plotHeight);
+	}
+}
+
+function observeChart(state) {
+	if (typeof window.IntersectionObserver !== 'function')
+		return;
+	if (!chartObserver)
+		chartObserver = new window.IntersectionObserver(function(entries) {
+			entries.forEach(function(entry) {
+				if (entry.target._laltChartState)
+					entry.target._laltChartState.visible = entry.isIntersecting;
+			});
+			wakeAnimator();
+		});
+	chartObserver.observe(state.canvas);
+}
+
+function drawChart(canvas, samples, options) {
+	if (!canvas)
+		return;
+
+	var currentQuality = qualityState();
+	var state = canvas._laltChartState;
+	if (!state) {
+		state = canvas._laltChartState = {
+			canvas: canvas,
+			options: options || {},
+			previous: [],
+			target: [],
+			previousMaximum: 1,
+			targetMaximum: 1,
+			startedAt: 0,
+			updatedAt: 0,
+			visible: true,
+			forceDraw: false,
+		};
+		chartStates.push(state);
+		observeChart(state);
+	}
+
+	state.options = options || {};
+	state.previous = state.target.length ? state.target : copySamples(samples);
+	state.target = copySamples(samples);
+	state.previousMaximum = state.targetMaximum || sampleMaximum(state.previous);
+	state.targetMaximum = sampleMaximum(state.target);
+	state.profile = currentQuality.profile;
+	state.motion = currentQuality.motion;
+	state.startedAt = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+	state.updatedAt = state.startedAt;
+	state.duration = state.previous.length && currentQuality.motion ? state.profile.duration : 0;
+	renderChart(state, state.startedAt, state.duration ? 0 : 1);
+	wakeAnimator();
+}
+
+function animateMetric(element, value, formatter) {
+	if (!element)
+		return;
+
+	var numeric = Number(value) || 0;
+	var currentQuality = qualityState();
+	var state = element._laltMetricState;
+	if (!state) {
+		state = element._laltMetricState = { element: element, value: numeric, target: numeric, peak: numeric, formatter: formatter };
+		metricStates.push(state);
+		element.textContent = formatter(numeric);
+		return;
+	}
+
+	state.value = state.target;
+	state.target = numeric;
+	state.formatter = formatter;
+	state.startedAt = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+	state.duration = currentQuality.motion ? currentQuality.profile.duration : 0;
+	element.classList.remove('lt-rate-rising', 'lt-rate-falling', 'lt-rate-updated', 'lt-rate-peak');
+	if (numeric > state.value)
+		element.classList.add('lt-rate-rising');
+	else if (numeric < state.value)
+		element.classList.add('lt-rate-falling');
+	if (state.duration)
+		element.classList.add('lt-rate-updated');
+	if (numeric > state.peak) {
+		state.peak = numeric;
+		if (currentQuality.profile.rank >= 2)
+			element.classList.add('lt-rate-peak');
+	}
+	if (!state.duration)
+		element.textContent = formatter(numeric);
+	wakeAnimator();
+}
+
+function animationFrame(frameTime) {
+	frameRequest = null;
+	if (document.hidden)
+		return;
+
+	if (lastFrameTime) {
+		var delta = frameTime - lastFrameTime;
+		measuredFrames++;
+		if (delta > 34)
+			slowFrames++;
+	}
+	lastFrameTime = frameTime;
+	var active = false;
+	var currentQuality = qualityState();
+
+	for (var i = chartStates.length - 1; i >= 0; i--) {
+		var chart = chartStates[i];
+		if (chart.canvas.isConnected === false) {
+			chartStates.splice(i, 1);
+			continue;
+		}
+		chart.profile = currentQuality.profile;
+		chart.motion = currentQuality.motion;
+		if (!chart.visible)
+			continue;
+		var elapsed = frameTime - chart.startedAt;
+		var progress = chart.duration ? Math.min(1, elapsed / chart.duration) : 1;
+		if (chart.forceDraw || progress < 1 || (chart.profile.continuous && chart.motion)) {
+			renderChart(chart, frameTime, progress);
+			chart.forceDraw = false;
+		}
+		if (progress < 1 || (chart.profile.continuous && chart.motion))
+			active = true;
+	}
+
+	for (var metricIndex = metricStates.length - 1; metricIndex >= 0; metricIndex--) {
+		var metric = metricStates[metricIndex];
+		if (metric.element.isConnected === false) {
+			metricStates.splice(metricIndex, 1);
+			continue;
+		}
+		var metricProgress = metric.duration ? Math.min(1, (frameTime - metric.startedAt) / metric.duration) : 1;
+		metric.element.textContent = metric.formatter(metric.value + (metric.target - metric.value) * easing(metricProgress));
+		if (metricProgress < 1)
+			active = true;
+		else
+			metric.element.classList.remove('lt-rate-updated');
+	}
+
+	reportFrameWindow();
+	if (active)
+		wakeAnimator();
+	else
+		lastFrameTime = 0;
 }
 
 function loadCss() {
@@ -313,6 +813,35 @@ function loadCss() {
 	document.head.appendChild(link);
 }
 
+if (typeof window.addEventListener === 'function') {
+	window.addEventListener('storage', function(event) {
+		if (event.key === QUALITY_STORAGE_KEY) {
+			fallbackQuality = validQuality(event.newValue) ? event.newValue : 'auto';
+			resetAutoState();
+			notifyQualityChange();
+		}
+	});
+	window.addEventListener('resize', notifyQualityChange);
+}
+
+if (reducedMotionQuery) {
+	if (typeof reducedMotionQuery.addEventListener === 'function')
+		reducedMotionQuery.addEventListener('change', notifyQualityChange);
+	else if (typeof reducedMotionQuery.addListener === 'function')
+		reducedMotionQuery.addListener(notifyQualityChange);
+}
+
+if (typeof document.addEventListener === 'function')
+	document.addEventListener('visibilitychange', function() {
+		lastFrameTime = 0;
+		applyQualityAttributes();
+		if (!document.hidden) {
+			for (var i = 0; i < chartStates.length; i++)
+				chartStates[i].forceDraw = true;
+			wakeAnimator();
+		}
+	});
+
 return baseclass.extend({
 	projectTitle: 'LALT - luci-app-live-traffic',
 	snapshot: callSnapshot,
@@ -324,5 +853,10 @@ return baseclass.extend({
 	formatRate: formatRate,
 	formatBytes: formatBytes,
 	drawChart: drawChart,
+	animateMetric: animateMetric,
+	qualityState: qualityState,
+	setQuality: setQuality,
+	createQualityControl: createQualityControl,
+	qualityLabel: qualityLabel,
 	loadCss: loadCss,
 });

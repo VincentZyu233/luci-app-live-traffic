@@ -1,5 +1,4 @@
 'use strict';
-'require dom';
 'require poll';
 'require view';
 'require live-traffic.core as traffic';
@@ -10,8 +9,50 @@ return view.extend({
 		return Promise.all([ traffic.snapshot(), traffic.leases() ]);
 	},
 
+	createCard: function(device) {
+		var canvas = E('canvas', { 'class': 'lt-chart compact' });
+		var name = E('h3', { 'class': 'lt-device-name' });
+		var meta = E('div', { 'class': 'lt-device-meta' });
+		var down = E('span', { 'class': 'download', 'title': _('Download') });
+		var up = E('span', { 'class': 'upload', 'title': _('Upload') });
+		var node = E('section', { 'class': 'lt-device' }, [
+			E('div', { 'class': 'lt-device-head' }, [
+				E('div', {}, [ name, meta ]),
+				E('div', { 'class': 'lt-device-rates' }, [ down, up ])
+			]),
+			canvas
+		]);
+
+		return { key: device.key, node: node, canvas: canvas, name: name, meta: meta, down: down, up: up };
+	},
+
+	updateCard: function(card, device) {
+		card.name.textContent = device.name;
+		card.meta.textContent = (device.ips.join(', ') || '-') + ' · ' + (device.mac || '-');
+		traffic.animateMetric(card.down, device.downRate, function(value) { return '↓ ' + traffic.formatRate(value); });
+		traffic.animateMetric(card.up, device.upRate, function(value) { return '↑ ' + traffic.formatRate(value); });
+	},
+
+	animateCardMove: function(node, before) {
+		var quality = traffic.qualityState();
+		if (!before || !quality.motion || quality.profile.rank < 2 || typeof window.requestAnimationFrame !== 'function')
+			return;
+
+		var after = node.getBoundingClientRect();
+		var deltaX = before.left - after.left;
+		var deltaY = before.top - after.top;
+		if (!deltaX && !deltaY)
+			return;
+
+		node.style.transition = 'none';
+		node.style.transform = 'translate(' + deltaX + 'px, ' + deltaY + 'px)';
+		window.requestAnimationFrame(function() {
+			node.style.transition = 'transform 480ms cubic-bezier(.2, .8, .2, 1)';
+			node.style.transform = '';
+		});
+	},
+
 	update: function(snapshot) {
-		var self = this;
 		this.state = this.monitor.ingest(snapshot, this.leasesPayload);
 		var settings = snapshot.settings || {};
 		if (snapshot.error) {
@@ -27,31 +68,48 @@ return view.extend({
 			this.status.textContent = _('Showing %d downstream device(s).').format(this.state.devices.length);
 		}
 
-		var nodes = this.state.devices.map(function(device) {
-			var canvas = E('canvas', { 'class': 'lt-chart compact' });
-			var node = E('section', { 'class': 'lt-device' }, [
-				E('div', { 'class': 'lt-device-head' }, [
-					E('div', {}, [
-						E('h3', { 'class': 'lt-device-name' }, device.name),
-						E('div', { 'class': 'lt-device-meta' }, (device.ips.join(', ') || '-') + ' · ' + (device.mac || '-'))
-					]),
-					E('div', { 'class': 'lt-device-rates' }, [
-						E('span', { 'class': 'download', 'title': _('Download') }, '↓ ' + traffic.formatRate(device.downRate)),
-						E('span', { 'class': 'upload', 'title': _('Upload') }, '↑ ' + traffic.formatRate(device.upRate))
-					])
-				]),
-				canvas
-			]);
+		var before = {};
+		Object.keys(this.cards).forEach(function(key) {
+			before[key] = this.cards[key].node.getBoundingClientRect();
+		}, this);
 
-			window.requestAnimationFrame(function() {
-				traffic.drawChart(canvas, self.monitor.samples(device.key), { compact: true });
-			});
-			return node;
-		});
+		var active = {};
+		for (var i = 0; i < this.state.devices.length; i++) {
+			var device = this.state.devices[i];
+			var card = this.cards[device.key];
+			if (!card) {
+				card = this.cards[device.key] = this.createCard(device);
+				this.grid.appendChild(card.node);
+			}
+			active[device.key] = true;
+			this.updateCard(card, device);
+			this.grid.appendChild(card.node);
+		}
 
-		if (!nodes.length)
-			nodes.push(E('div', { 'class': 'lt-status' }, _('No downstream client traffic has been recorded yet.')));
-		dom.content(this.grid, nodes);
+		Object.keys(this.cards).forEach(function(key) {
+			if (!active[key]) {
+				this.cards[key].node.remove();
+				delete this.cards[key];
+			}
+		}, this);
+
+		if (!this.state.devices.length) {
+			if (!this.placeholder) {
+				this.placeholder = E('div', { 'class': 'lt-status' }, _('No downstream client traffic has been recorded yet.'));
+				this.grid.appendChild(this.placeholder);
+			}
+		}
+		else if (this.placeholder) {
+			this.placeholder.remove();
+			this.placeholder = null;
+		}
+
+		for (var deviceIndex = 0; deviceIndex < this.state.devices.length; deviceIndex++) {
+			var current = this.state.devices[deviceIndex];
+			var currentCard = this.cards[current.key];
+			this.animateCardMove(currentCard.node, before[current.key]);
+			traffic.drawChart(currentCard.canvas, this.monitor.samples(current.key), { compact: true });
+		}
 	},
 
 	refresh: function() {
@@ -76,16 +134,25 @@ return view.extend({
 		var snapshot = data[0] || {};
 		this.leasesPayload = data[1] || {};
 		this.leaseTicks = 0;
+		this.cards = {};
+		this.placeholder = null;
 		this.monitor = new traffic.Monitor(snapshot.settings && snapshot.settings.retention_seconds);
 		this.status = E('div', { 'class': 'lt-status' });
 		this.grid = E('div', { 'class': 'lt-devices' });
-		var node = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, traffic.projectTitle),
+		this.qualityControl = traffic.createQualityControl(true);
+		var node = E('div', { 'class': 'cbi-map lt-app' }, [
+			E('div', { 'class': 'lt-titlebar' }, [
+				E('h2', {}, traffic.projectTitle),
+				this.qualityControl
+			]),
 			E('div', { 'class': 'cbi-map-descr' }, _('Device Matrix')),
 			this.status,
 			E('div', { 'class': 'lt-legend' }, [ E('span', { 'class': 'download' }, _('Download')), E('span', { 'class': 'upload' }, _('Upload')) ]),
 			this.grid
 		]);
+		var quality = traffic.qualityState();
+		node.setAttribute('data-lalt-quality', quality.resolved);
+		node.setAttribute('data-lalt-motion', quality.motion ? 'on' : 'off');
 
 		this.update(snapshot);
 		poll.add(this.refresh.bind(this), Number(snapshot.settings && snapshot.settings.interval) || 1);

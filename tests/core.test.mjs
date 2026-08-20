@@ -9,6 +9,8 @@ const source = fs.readFileSync(
 );
 
 let now = 1_000_000;
+let storedQuality = null;
+let reducedMotion = false;
 const NativeDate = Date;
 class FakeDate extends NativeDate {
   static now() {
@@ -35,9 +37,20 @@ const sandbox = {
   _: (value) => value,
   window: {
     devicePixelRatio: 1,
+    innerWidth: 1200,
     getComputedStyle: () => ({ color: "#ffffff" }),
+    localStorage: {
+      getItem: () => storedQuality,
+      setItem: (_key, value) => { storedQuality = value; },
+    },
+    matchMedia: (query) => ({
+      get matches() {
+        return query.includes("prefers-reduced-motion") ? reducedMotion : true;
+      },
+    }),
   },
-  document: {},
+  navigator: { hardwareConcurrency: 4, deviceMemory: 8 },
+  document: { hidden: false, querySelectorAll: () => [] },
   L: {},
 };
 
@@ -107,6 +120,29 @@ test("evicts samples outside the retention window", () => {
 test("formats rates and byte totals", () => {
   assert.equal(core.formatRate(125000), "1.00 Mbit/s");
   assert.equal(core.formatBytes(1024), "1.00 KiB");
+});
+
+test("stores UI quality and resolves auto mode conservatively", () => {
+  core.setQuality("auto");
+  assert.equal(core.qualityState().resolved, "low");
+
+  sandbox.navigator.hardwareConcurrency = 8;
+  assert.equal(core.qualityState().resolved, "medium");
+
+  reducedMotion = true;
+  assert.equal(core.qualityState().resolved, "low");
+  assert.equal(core.qualityState().motion, false);
+
+  core.setQuality("ultra");
+  assert.equal(storedQuality, "ultra");
+  assert.equal(core.qualityState().resolved, "ultra");
+  assert.equal(core.qualityState().motion, false);
+
+  reducedMotion = false;
+  sandbox.navigator.hardwareConcurrency = 4;
+  core.setQuality("invalid");
+  assert.equal(storedQuality, "auto");
+  assert.equal(core.qualityState().resolved, "low");
 });
 
 test("reserves space for rate labels and renders responsive time ticks", () => {

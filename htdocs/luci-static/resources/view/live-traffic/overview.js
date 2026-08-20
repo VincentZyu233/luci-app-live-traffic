@@ -93,9 +93,9 @@ return view.extend({
 		var status = this.statusText(snapshot);
 		this.status.className = 'lt-status' + (status.type ? ' ' + status.type : '');
 		this.status.textContent = status.text;
-		this.wanDown.textContent = traffic.formatRate(this.state.wan.downRate);
-		this.wanUp.textContent = traffic.formatRate(this.state.wan.upRate);
-		this.clientCount.textContent = String(this.state.devices.length);
+		traffic.animateMetric(this.wanDown, this.state.wan.downRate, traffic.formatRate);
+		traffic.animateMetric(this.wanUp, this.state.wan.upRate, traffic.formatRate);
+		traffic.animateMetric(this.clientCount, this.state.devices.length, function(value) { return String(Math.round(value)); });
 		this.lastUpdate.textContent = new Date().toLocaleTimeString();
 		this.updateRows();
 
@@ -139,9 +139,13 @@ return view.extend({
 		this.deviceChart = E('canvas', { 'class': 'lt-chart' });
 		this.selectedTitle = E('h3', {}, _('Device trend'));
 		this.tableBody = E('tbody');
+		this.qualityControl = traffic.createQualityControl(true);
 
-		var node = E('div', { 'class': 'cbi-map' }, [
-			E('h2', {}, traffic.projectTitle),
+		var node = E('div', { 'class': 'cbi-map lt-app' }, [
+			E('div', { 'class': 'lt-titlebar' }, [
+				E('h2', {}, traffic.projectTitle),
+				this.qualityControl
+			]),
 			this.status,
 			E('div', { 'class': 'lt-kpis' }, [
 				E('div', { 'class': 'lt-kpi' }, [ E('span', { 'class': 'lt-kpi-label' }, _('WAN download')), this.wanDown ]),
@@ -174,6 +178,9 @@ return view.extend({
 				this.deviceChart
 			])
 		]);
+		var quality = traffic.qualityState();
+		node.setAttribute('data-lalt-quality', quality.resolved);
+		node.setAttribute('data-lalt-motion', quality.motion ? 'on' : 'off');
 
 		this.update(snapshot);
 		poll.add(this.refresh.bind(this), Number(snapshot.settings && snapshot.settings.interval) || 1);

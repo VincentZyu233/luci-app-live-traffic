@@ -140,3 +140,30 @@ msgstr "5 秒"
 
 msgid "10 seconds"
 msgstr "10 秒"
+
+msgid "UI quality"
+msgstr "界面质量"
+
+msgid "Browser UI quality"
+msgstr "浏览器界面质量"
+
+msgid "Auto"
+msgstr "自动"
+
+msgid "Low"
+msgstr "低"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "High"
+msgstr "高"
+
+msgid "Ultra"
+msgstr "超高"
+
+msgid "Effective quality: %s"
+msgstr "当前实际质量：%s"
+
+msgid "This preference is stored in this browser and does not change router sampling."
+msgstr "此偏好仅保存在当前浏览器中，不会改变路由器采样设置。"
